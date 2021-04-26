@@ -11,7 +11,7 @@ sometimes want to replace it selectively, you have to repeatedly correct RegExp.
 
 在vs code中，只能填入一对find/replace，使用这个插件，你可以填写多个正则，选择其中一个进行替换。
 
-![](./images/pic1.png)
+![](./assets/images/pic1.png)
 
 > 1. you can use RegExp just like in Visual Studio Code, the replacement use `String.prototype.replace`.
 > 2. The RegExp options will restore on next open the extension.
