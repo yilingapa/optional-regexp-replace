@@ -1,0 +1,67 @@
+{
+  "name": "optional-regexp-replace",
+  "displayName": "Optional Regexp Replace",
+  "description": "optional regexp replace",
+  "keywords": [
+    "vscode",
+    "plugin",
+    "regexpreplace"
+  ],
+  "version": "0.0.1",
+  "publisher": "qilejia",
+  "engines": {
+    "vscode": "^1.55.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "icon": "assets/images/icon.png",
+  "activationEvents": [
+    "onCommand:optional.regexp.replace"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "optional.regexp.replace",
+        "title": "optional regexp replace"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "webpack",
+    "compile-views": "webpack --config ./views/webpack.config.js",
+    "watch": "webpack --watch",
+    "package": "webpack --mode production --devtool hidden-source-map",
+    "test-compile": "tsc -p ./",
+    "test-watch": "tsc -watch -p ./",
+    "pretest": "npm run test-compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/glob": "^7.1.3",
+    "@types/lodash": "^4.14.168",
+    "@types/mocha": "^8.0.4",
+    "@types/node": "^12.11.7",
+    "@types/react": "^17.0.3",
+    "@types/react-color": "^3.0.4",
+    "@types/react-dom": "^17.0.3",
+    "@types/vscode": "^1.55.0",
+    "@typescript-eslint/eslint-plugin": "^4.14.1",
+    "@typescript-eslint/parser": "^4.14.1",
+    "eslint": "^7.19.0",
+    "glob": "^7.1.6",
+    "html-webpack-plugin": "^5.3.1",
+    "mocha": "^8.2.1",
+    "react": "^17.0.2",
+    "react-color": "^2.19.3",
+    "react-dom": "^17.0.2",
+    "ts-loader": "^8.0.14",
+    "typescript": "^4.1.3",
+    "vscode-test": "^1.5.0",
+    "webpack": "^5.19.0",
+    "webpack-cli": "^4.4.0"
+  }
+}

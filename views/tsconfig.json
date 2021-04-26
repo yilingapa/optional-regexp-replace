@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES6",
+    "module": "ES2015",
+    "moduleResolution": "Node",
+    "importHelpers": true,
+    "jsx": "react",
+    "sourceMap": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "rootDir": "./",
+    "composite": false,
+    "skipLibCheck": true,
+    "outDir": "../dist/",
+  },
+  "dependencies": {
+    "tslib": "1.14.1",
+  },
+  "include": [
+    ".d.ts",
+    "*.ts",
+    "*.tsx"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}
