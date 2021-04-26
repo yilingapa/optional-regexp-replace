@@ -1,6 +1,7 @@
 import * as vscode from 'vscode'
 import * as fs from 'fs'
 import * as os from 'os'
+import { debounce } from 'lodash'
 
 
 type PosItem = {
@@ -20,45 +21,65 @@ export const Utils = {
 }
 
 export class FileHandler {
-  editor: vscode.TextEditor | undefined = undefined
-  document: vscode.TextDocument | undefined = undefined
-  currentDecoration: vscode.TextEditorDecorationType | undefined = undefined
-  currentLineDecoration: vscode.TextEditorDecorationType | undefined = undefined
+  editor?: vscode.TextEditor
+  document?: vscode.TextDocument
+  currentFileStr?: string
+  currentDecoration?: vscode.TextEditorDecorationType
+  currentLineDecoration?: vscode.TextEditorDecorationType
   matchedPositions: { start: vscode.Position, end: vscode.Position, matchedStr: string }[] = []
   currentSelectedIndex: number = 0
   ignoreCase: boolean = false
-  currentHighlightColor: string | undefined = undefined
-  clearOnChangeEditor: vscode.Disposable | undefined = undefined
-  clearOnChangeDoc: vscode.Disposable | undefined = undefined
+  currentMatch: string = ''
+  currentHighlightColor?: string
+  clearOnChangeSelectionListener?: vscode.Disposable
+  clearOnChangeDocListener?: vscode.Disposable
 
-  getFile = (uri?: string) => {
+  updateCurrentHighlightColor = (color: string) => {
+    this.currentHighlightColor = color
+  }
+
+  updateCurrentMatch = (match: string) => {
+    this.currentMatch = match
+  }
+
+  getFile = () => {
     try {
       this.editor = vscode.window.activeTextEditor ?? vscode.window.visibleTextEditors[0]
-      if (!uri) {
-        this.document = this.editor?.document
-      }
+      this.document = this.editor?.document
       if (!this.document) {
-        throw '无打开的文件'
+        throw 'no opened file'
       }
-      this.clearOnChangeEditor = vscode.window.onDidChangeActiveTextEditor(editor => {
-        if (editor !== this.editor) {
-          this.clearStatus()
+      this.clearOnChangeSelectionListener = vscode.window.onDidChangeTextEditorSelection((e) => {
+        if (e.textEditor === this.editor) {
+          const selectionItemIndex = this.matchedPositions.findIndex(i => i.start.line === e.selections[0]?.start.line)
+          if (selectionItemIndex > -1) {
+            this.currentSelectedIndex = selectionItemIndex
+            this.select({ ...this.matchedPositions[selectionItemIndex], ifSetSelection: false })
+          }
         }
       })
-      this.clearOnChangeDoc = vscode.workspace.onDidChangeTextDocument(e => {
+      const memoDebounce = debounce(() => this.highLightString(false))
+      this.clearOnChangeDocListener = vscode.workspace.onDidChangeTextDocument(e => {
         if (this.matchedPositions.length === 0) {
           this.clearStatus()
+        } else {
+          this.currentFileStr = this.document?.getText()
+          memoDebounce()
         }
       })
-      return this.document.getText()
+      this.currentFileStr = this.document.getText()
+      return this.currentFileStr
     } catch (e) {
       Utils.showError(e)
       return undefined
     }
   }
-  select = ({ start, end }: { start: vscode.Position, end: vscode.Position }) => {
+
+  select = ({ start, end, ifSetSelection = true }: { start: vscode.Position, end: vscode.Position, ifSetSelection?: boolean }) => {
     if (this.editor) {
-      this.editor.selections = [new vscode.Selection(start, end)]
+      if (ifSetSelection) {
+        this.editor.selections = [new vscode.Selection(start, end)]
+      }
       const range = new vscode.Range(start, end)
       this.editor.revealRange(range)
 
@@ -80,6 +101,7 @@ export class FileHandler {
     this.select(this.matchedPositions[this.currentSelectedIndex])
     return this.matchedPositions[this.currentSelectedIndex].end.line
   }
+
   selectPrevious = () => {
     this.currentSelectedIndex -= 1
     if (this.currentSelectedIndex < 0) {
@@ -88,28 +110,31 @@ export class FileHandler {
     this.select(this.matchedPositions[this.currentSelectedIndex])
     return this.matchedPositions[this.currentSelectedIndex].end.line
   }
+
   clearStatus = () => {
     this.currentDecoration?.dispose()
     this.currentLineDecoration?.dispose()
-    this.clearOnChangeEditor?.dispose()
-    this.clearOnChangeDoc?.dispose()
+    this.clearOnChangeSelectionListener?.dispose()
+    this.clearOnChangeDocListener?.dispose()
     this.matchedPositions = []
     this.currentSelectedIndex = 0
   }
-  refreshDecoration = (color: string, ranges: vscode.Range[]) => {
+
+  refreshDecoration = (ranges: vscode.Range[]) => {
     this.currentDecoration?.dispose()
     this.currentDecoration = vscode.window.createTextEditorDecorationType({
-      backgroundColor: color,
+      backgroundColor: this.currentHighlightColor,
       border: `1px solid #ececec`
     })
     this.editor?.setDecorations(this.currentDecoration, ranges)
   }
-  highLightString = (fileString: string, match: string, color: string) => {
+
+  highLightString = (needSelection = true) => {
     if (this.editor) {
       const pos: PosItem[] = []
-      const rows = fileString.split(os.EOL)
+      const rows = this.currentFileStr?.split(os.EOL) ?? []
       let matchStr: RegExpExecArray | null = null
-      const matchRegexp = new RegExp(match, this.ignoreCase ? 'ig' : 'g')
+      const matchRegexp = new RegExp(this.currentMatch, this.ignoreCase ? 'ig' : 'g')
       rows.forEach((colStr, index) => {
         while (matchStr = matchRegexp.exec(colStr)) {
           pos.push({
@@ -121,7 +146,6 @@ export class FileHandler {
         }
       })
       if (!pos.length) return 0
-      this.currentHighlightColor = color
       this.matchedPositions = []
       const ranges = pos.map((item) => {
         const start = new vscode.Position(item.row, item.col)
@@ -133,19 +157,22 @@ export class FileHandler {
         })
         return new vscode.Range(start, end)
       })
-      if (this.matchedPositions[0]) {
-        this.currentSelectedIndex = 0
-        this.select(this.matchedPositions[0])
+      if (needSelection) {
+        if (this.matchedPositions[0]) {
+          this.currentSelectedIndex = 0
+          this.select(this.matchedPositions[0])
+        }
       }
-      this.refreshDecoration(this.currentHighlightColor, ranges)
+      this.refreshDecoration(ranges)
       return pos.length
     }
   }
-  resetHighlightColor = (color: string) => {
+
+  resetHighlightColor = () => {
     if (this.editor) {
       this.currentDecoration?.dispose()
       this.currentDecoration = vscode.window.createTextEditorDecorationType({
-        backgroundColor: color,
+        backgroundColor: this.currentHighlightColor,
         border: `1px solid #ececec`
       })
       this.editor?.setDecorations(this.currentDecoration, this.matchedPositions.map(i => {
@@ -153,19 +180,18 @@ export class FileHandler {
       }))
     }
   }
-  editSelected = (match: string, regexp: string) => {
+
+  editSelected = async (regexp: string) => {
     const selected = this.matchedPositions[this.currentSelectedIndex]
     if (selected) {
-      const to = selected.matchedStr.replace(new RegExp(match, this.ignoreCase ? 'ig' : 'g'), regexp)
-      this.editor?.edit(editCommand => {
+      const to = selected.matchedStr.replace(new RegExp(this.currentMatch, this.ignoreCase ? 'ig' : 'g'), regexp)
+      await this.editor?.edit(editCommand => {
         editCommand.replace(new vscode.Range(selected.start, selected.end), to)
       })
       this.matchedPositions.splice(this.currentSelectedIndex, 1)
       this.currentSelectedIndex -= 1
-      this.refreshDecoration(this.currentHighlightColor!, this.matchedPositions.map(i => {
-        return new vscode.Range(i.start, i.end)
-      }))
       this.selectNext()
+      this.highLightString(false)
       return {
         line: selected.end.line,
         text: to
@@ -173,10 +199,11 @@ export class FileHandler {
     }
     return null
   }
-  editAllSelected = async (match: string, regexp: string) => {
+
+  editAllSelected = async (regexp: string) => {
     const times = this.matchedPositions.length
     for (const selected of this.matchedPositions) {
-      const to = selected.matchedStr.replace(new RegExp(match, this.ignoreCase ? 'ig' : 'g'), regexp)
+      const to = selected.matchedStr.replace(new RegExp(this.currentMatch, this.ignoreCase ? 'ig' : 'g'), regexp)
       await this.editor?.edit(editCommand => {
         editCommand.replace(new vscode.Range(selected.start, selected.end), to)
       })

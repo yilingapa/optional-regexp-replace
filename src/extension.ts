@@ -2,13 +2,11 @@ import * as vscode from 'vscode';
 import * as path from 'path'
 import * as fs from 'fs'
 import { FileHandler } from './utils'
-import { defaultHighlightColor, getColorStr, secretsKey, uniqueUIDForSyncStoreCommand } from '../views/const'
+import { secretsKey, uniqueUIDForSyncStoreCommand } from '../views/const'
 
 export function activate(context: vscode.ExtensionContext) {
   let currentPanel: vscode.WebviewPanel | undefined = undefined;
-  let highlightColor = getColorStr(defaultHighlightColor.rgba)
   let currentFile: FileHandler | undefined = undefined
-  let fileStr: string | undefined = undefined
 
   context.subscriptions.push(
     vscode.commands.registerCommand('optional.regexp.replace', () => {
@@ -49,18 +47,50 @@ export function activate(context: vscode.ExtensionContext) {
               }
             })
           }
-        }, 2000)
+        }, 1000)
+
+
+        const prepareCurrentFile = () => {
+          if (!currentFile) {
+            currentFile = new FileHandler()
+          }
+        }
 
         currentPanel.webview.onDidReceiveMessage(message => {
           if (currentPanel !== undefined) {
             switch (message.command) {
+              case 'setCurrentMatch':
+                {
+                  prepareCurrentFile()
+                  currentFile!.currentMatch = message.payload
+                  currentPanel.webview.postMessage({
+                    command: 'vscodeCB',
+                    payload: {
+                      data: null,
+                      cbUID: message.cbUID
+                    }
+                  })
+                }
+                break
+              case 'setCurrentHighlightColor':
+                {
+                  prepareCurrentFile()
+                  currentFile!.currentHighlightColor = message.payload
+                  currentPanel.webview.postMessage({
+                    command: 'vscodeCB',
+                    payload: {
+                      data: null,
+                      cbUID: message.cbUID
+                    }
+                  })
+                }
+                break
               case 'searchAllAndHightLight':
                 {
-                  currentFile?.clearStatus()
-                  currentFile = new FileHandler()
-                  fileStr = currentFile.getFile()
-                  if (fileStr !== undefined) {
-                    const num = currentFile.highLightString(fileStr, message.payload, highlightColor)
+                  prepareCurrentFile()
+                  currentFile!.clearStatus()
+                  if (currentFile!.currentFileStr = currentFile!.getFile()) {
+                    const num = currentFile!.highLightString()
                     currentPanel.webview.postMessage({
                       command: 'vscodeCB',
                       payload: {
@@ -78,8 +108,7 @@ export function activate(context: vscode.ExtensionContext) {
                 break
               case 'setHighlightColor':
                 {
-                  highlightColor = message.payload
-                  currentFile?.resetHighlightColor(highlightColor)
+                  currentFile?.resetHighlightColor()
                   currentPanel.webview.postMessage({
                     command: 'vscodeCB',
                     payload: {
@@ -125,9 +154,9 @@ export function activate(context: vscode.ExtensionContext) {
                 break
               case 'ignoreCase':
                 {
-                  if (currentFile !== undefined && fileStr !== undefined) {
+                  if (currentFile !== undefined) {
                     currentFile.ignoreCase = message.payload.checked
-                    currentFile.highLightString(fileStr, message.payload.match, highlightColor)
+                    currentFile.highLightString()
                     currentPanel.webview.postMessage({
                       command: 'vscodeCB',
                       payload: {
@@ -140,21 +169,22 @@ export function activate(context: vscode.ExtensionContext) {
                 break
               case 'editSelected':
                 {
-                  const res = currentFile?.editSelected(message.payload.match, message.payload.to)
-                  if (res) {
-                    currentPanel.webview.postMessage({
-                      command: 'vscodeCB',
-                      payload: {
-                        data: res,
-                        cbUID: message.cbUID
-                      }
-                    })
-                  }
+                  currentFile?.editSelected(message.payload.to).then(res => {
+                    if (res) {
+                      currentPanel?.webview.postMessage({
+                        command: 'vscodeCB',
+                        payload: {
+                          data: res,
+                          cbUID: message.cbUID
+                        }
+                      })
+                    }
+                  })
                 }
                 break
               case 'editAllSelected':
                 {
-                  currentFile?.editAllSelected(message.payload.match, message.payload.to).then(res => {
+                  currentFile?.editAllSelected(message.payload.to).then(res => {
                     if (res) {
                       currentPanel?.webview.postMessage({
                         command: 'vscodeCB',
@@ -177,7 +207,6 @@ export function activate(context: vscode.ExtensionContext) {
             currentFile?.clearStatus()
             currentFile = undefined
             currentPanel = undefined
-            fileStr = undefined
           },
           null,
           context.subscriptions

@@ -122,7 +122,36 @@ function APP() {
   const [findRegExp, setFindRegexp] = useState<string>()
   const [ignoreCase, setIgnoreCase] = useState(false)
 
+  const saveToContext = useMemo(() => {
+    return debounce((list: RegexpItem[], match: string) => bridge.post({
+      command: 'saveOptionsToContext',
+      payload: {
+        list,
+        match
+      }
+    }, () => null), 200)
+  }, [])
+
+  const setCurrentMatch = useMemo(() => {
+    return (match: string, cb: () => void) => {
+      bridge.post({
+        command: 'setCurrentMatch',
+        payload: match
+      }, debounce(cb, 200))
+    }
+  }, [])
+
+  const setCurrentHighlightColor = useMemo(() => {
+    return (color: string, cb: () => void) => {
+      bridge.post({
+        command: 'setCurrentHighlightColor',
+        payload: color
+      }, cb)
+    }
+  }, [])
+
   useEffect(() => {
+    setCurrentHighlightColor(getColorStr(defaultHighlightColor.rgba), () => undefined)
     const listener = (
       event: {
         data: {
@@ -133,7 +162,10 @@ function APP() {
     ) => {
       try {
         if (event.data?.command === uniqueUIDForSyncStoreCommand) {
-          setList(JSON.parse(event.data.payload))
+          const store = JSON.parse(event.data.payload)
+          setList(store?.list ?? [])
+          setCurrentMatch(store?.match, () => undefined)
+          setFindRegexp(store?.match)
         }
       } catch {
         setHistory(s => {
@@ -153,65 +185,57 @@ function APP() {
       text: string) => `[${type}] ${new Date().toLocaleTimeString()}: ${text}\n`
   }, [])
 
-
-  const saveToContext = useMemo(() => {
-    return debounce((list: RegexpItem[]) => bridge.post({
-      command: 'saveOptionsToContext',
-      payload: list
-    }, () => null), 199)
-  }, [])
-
   const addRegexp = useCallback(() => {
     setList(s => {
       s.unshift({
         checked: s.length === 0,
         regexp: ''
       })
-      saveToContext(s)
+      saveToContext(s, findRegExp)
       return [...s]
     })
-  }, [])
+  }, [findRegExp])
 
   const remove = useCallback((index: number) => {
     setList(s => {
       s.splice(index, 1)
-      saveToContext(s)
+      saveToContext(s, findRegExp)
       return [...s]
     })
-  }, [])
+  }, [findRegExp])
 
   const toggleChecked = useCallback((index: number, checked: boolean) => {
     setList(s => {
       s.forEach(i => i.checked = false)
       s[index].checked = checked
-      saveToContext(s)
+      saveToContext(s, findRegExp)
       return [...s]
     })
-  }, [])
+  }, [findRegExp])
 
   const setRegexp = useCallback((index: number, regexp: string) => {
     setList(s => {
       s[index].regexp = regexp
-      saveToContext(s)
+      saveToContext(s, findRegExp)
       return [...s]
     })
-  }, [])
+  }, [findRegExp])
 
-  const searchAllAndHightLight = useCallback(() => {
-    if (findRegExp) {
+  const searchAllAndHightLight = useCallback((match = findRegExp) => {
+    if (match) {
       bridge.post({
         command: 'searchAllAndHightLight',
-        payload: findRegExp
+        payload: match
       }, (time: number) => {
         setHistory(s => {
-          s.unshift(getLog('info', `search for ${findRegExp}, found ${time}`))
+          s.unshift(getLog('info', `search for ${match}, found ${time}`))
           return [...s]
         })
       })
     } else {
       bridge.post({
         command: 'clearStatus',
-        payload: findRegExp
+        payload: match
       }, () => {
         setHistory(s => {
           s.unshift(getLog('error', `empty regexp`))
@@ -247,16 +271,22 @@ function APP() {
 
   const setFindRegexpCB = useCallback((e) => {
     setFindRegexp(e.target.value)
-  }, [])
+    setCurrentMatch(e.target.value, () => {
+      searchAllAndHightLight(e.target.value)
+    })
+    saveToContext(list, e.target.value)
+  }, [list])
 
   const setHighlightColor = useCallback((color) => {
-    bridge.post({
-      command: 'setHighlightColor',
-      payload: color
-    }, () => {
-      setHistory(s => {
-        s.unshift(getLog('info', `set highlight color ${color}`))
-        return [...s]
+    setCurrentHighlightColor(color, () => {
+      bridge.post({
+        command: 'setHighlightColor',
+        payload: color
+      }, () => {
+        setHistory(s => {
+          s.unshift(getLog('info', `set highlight color ${color}`))
+          return [...s]
+        })
       })
     })
   }, [])
@@ -267,8 +297,7 @@ function APP() {
       bridge.post({
         command: 'editSelected',
         payload: {
-          to: selected.regexp ?? '',
-          match: findRegExp
+          to: selected.regexp ?? ''
         }
       }, ({ line, text }: { line: number, text: string }) => {
         setHistory(s => {
@@ -282,7 +311,7 @@ function APP() {
         return [...s]
       })
     }
-  }, [list, findRegExp])
+  }, [list])
 
   const editALLSelected = useCallback(() => {
     const selected = list.find(i => i.checked)
@@ -290,8 +319,7 @@ function APP() {
       bridge.post({
         command: 'editAllSelected',
         payload: {
-          to: selected.regexp ?? '',
-          match: findRegExp
+          to: selected.regexp ?? ''
         }
       }, ({ times, text }: { times: number, text: string }) => {
         setHistory(s => {
@@ -305,7 +333,7 @@ function APP() {
         return [...s]
       })
     }
-  }, [list, findRegExp])
+  }, [list])
 
 
   const toggleIgnoreCase = useCallback((e) => {
@@ -329,6 +357,10 @@ function APP() {
     setHistory([])
   }, [])
 
+  const searchMemo = useMemo(() => {
+    return () => searchAllAndHightLight(findRegExp)
+  }, [findRegExp])
+
   return <div className="regexp-wrap-grid">
     <div>
       <h3>Optional Regexp Replace</h3>
@@ -345,7 +377,7 @@ function APP() {
       </div>
       <div className="dvd" />
       <div className="common-grid">
-        <button className="primary-button" onClick={searchAllAndHightLight}>search ⌕</button>
+        <button className="primary-button" onClick={searchMemo}>search ⌕</button>
         <button onClick={pre}>←previous</button>
         <button onClick={next}>→next</button>
       </div>
