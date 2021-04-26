@@ -1,7 +1,8 @@
-import React, { memo, PropsWithChildren, useCallback, useMemo, useState } from 'react'
+import React, { memo, PropsWithChildren, useCallback, useEffect, useMemo, useState } from 'react'
 import ReactDom from 'react-dom'
 import { ChromePicker, ColorResult } from 'react-color'
-import { defaultHighlightColor, getColorStr } from './const'
+import { defaultHighlightColor, getColorStr, uniqueUIDForSyncStoreCommand } from './const'
+import { debounce } from 'lodash';
 
 const vscode = acquireVsCodeApi();
 
@@ -55,14 +56,14 @@ type RegexpItem = {
   regexp?: string
 }
 
-const Item = memo(function Item(
+const Item = memo((
   props: PropsWithChildren<{
     index: number
     remove: (index: number) => void
     toggleChecked: (index: number, checked: boolean) => void
     setRegexp: (index: number, regexp: string) => void
   } & RegexpItem>
-) {
+) => {
   const remove = useCallback(() => {
     props.remove(props.index)
   }, [])
@@ -74,7 +75,7 @@ const Item = memo(function Item(
   }, [])
   return <div className="item">
     <input onChange={toggleChecked} type="checkbox" checked={props.checked} />
-    <input placeholder="input regexp" onChange={setRegexp} value={props.regexp} />
+    <input placeholder="input regexp" onChange={setRegexp} type="text" value={props.regexp} />
     <button onClick={remove}>-</button>
   </div>
 })
@@ -121,17 +122,52 @@ function APP() {
   const [findRegExp, setFindRegexp] = useState<string>()
   const [ignoreCase, setIgnoreCase] = useState(false)
 
+  useEffect(() => {
+    const listener = (
+      event: {
+        data: {
+          command: string
+          payload: any
+        }
+      }
+    ) => {
+      try {
+        if (event.data?.command === uniqueUIDForSyncStoreCommand) {
+          setList(JSON.parse(event.data.payload))
+        }
+      } catch {
+        setHistory(s => {
+          s.unshift(getLog('error', `sync option store filed`))
+          return [...s]
+        })
+      }
+    }
+    window.addEventListener('message', listener)
+    return () => {
+      window.removeEventListener('message', listener)
+    }
+  }, [])
+
   const getLog = useMemo(() => {
     return (type: 'info' | 'error',
       text: string) => `[${type}] ${new Date().toLocaleTimeString()}: ${text}\n`
+  }, [])
+
+
+  const saveToContext = useMemo(() => {
+    return debounce((list: RegexpItem[]) => bridge.post({
+      command: 'saveOptionsToContext',
+      payload: list
+    }, () => null), 199)
   }, [])
 
   const addRegexp = useCallback(() => {
     setList(s => {
       s.unshift({
         checked: s.length === 0,
-        regexp: undefined
+        regexp: ''
       })
+      saveToContext(s)
       return [...s]
     })
   }, [])
@@ -139,6 +175,7 @@ function APP() {
   const remove = useCallback((index: number) => {
     setList(s => {
       s.splice(index, 1)
+      saveToContext(s)
       return [...s]
     })
   }, [])
@@ -147,6 +184,7 @@ function APP() {
     setList(s => {
       s.forEach(i => i.checked = false)
       s[index].checked = checked
+      saveToContext(s)
       return [...s]
     })
   }, [])
@@ -154,6 +192,7 @@ function APP() {
   const setRegexp = useCallback((index: number, regexp: string) => {
     setList(s => {
       s[index].regexp = regexp
+      saveToContext(s)
       return [...s]
     })
   }, [])
@@ -231,9 +270,32 @@ function APP() {
           to: selected.regexp ?? '',
           match: findRegExp
         }
-      }, (line: number, text: string) => {
+      }, ({ line, text }: { line: number, text: string }) => {
         setHistory(s => {
           s.unshift(getLog('info', `set target to [ ${text} ] at line: ${line}`))
+          return [...s]
+        })
+      })
+    } else {
+      setHistory(s => {
+        s.unshift(getLog('error', `no regexp checked`))
+        return [...s]
+      })
+    }
+  }, [list, findRegExp])
+
+  const editALLSelected = useCallback(() => {
+    const selected = list.find(i => i.checked)
+    if (selected) {
+      bridge.post({
+        command: 'editAllSelected',
+        payload: {
+          to: selected.regexp ?? '',
+          match: findRegExp
+        }
+      }, ({ times, text }: { times: number, text: string }) => {
+        setHistory(s => {
+          s.unshift(getLog('info', `set target to [ ${text} ], ${times} times`))
           return [...s]
         })
       })
@@ -291,6 +353,7 @@ function APP() {
       <div className="common-grid">
         <button onClick={addRegexp} className="primary-button">+add regexp option</button>
         <button onClick={editSelected} className="fire-button">▶︎replace</button>
+        <button onClick={editALLSelected} className="fire-button">▶︎replace all</button>
       </div>
       <div className="dvd" />
       <div className="common-grid">
@@ -304,7 +367,8 @@ function APP() {
             setRegexp={setRegexp}
             index={i}
             remove={remove}
-            {..._}
+            checked={_.checked}
+            regexp={_.regexp}
           />
         })
       }

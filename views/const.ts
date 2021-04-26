@@ -12,3 +12,7 @@ export const getColorStr = ({ r, g, b, a = 1 }: Record<'r' | 'g' | 'b', number> 
 }) => {
   return `rgba(${r},${g},${b},${a})`
 }
+
+export const secretsKey = 'optional-regexp-replace-options'
+
+export const uniqueUIDForSyncStoreCommand = 'uniqueUIDForSyncStore'

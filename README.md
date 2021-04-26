@@ -1,70 +1,33 @@
-# replace README
+# Optional Regexp Replace
 
-This is the README for your extension "replace". After writing up a brief description, we recommend including the following sections.
+A Visual Studio Code extension to find and replace optionally.
+
+一个可以选择性替换的vs code插件。
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+In Visual Studio Code, it can only replace one to one,
+sometimes want to replace it selectively, you have to repeatedly correct RegExp. With this Extension you can write several RegExps and select one to replace.
 
-For example if there is an image subfolder under your extension project workspace:
+在vs code中，只能填入一对find/replace，使用这个插件，你可以填写多个正则，选择其中一个进行替换。
 
-\!\[feature X\]\(images/feature-x.png\)
+![](./images/pic1.png)
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+> 1. you can use RegExp just like in Visual Studio Code, the replacement use `String.prototype.replace`.
+> 2. The RegExp options will restore on next open the extension.
 
-## Requirements
+## Install
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+copy `vscode:extension/qilejia.optional-regexp-replace` to browser or search **optional-regexp-replace** in [Visual Studio Code Extensions Market](https://marketplace.visualstudio.com/search?target=VSCode&category=Other&sortBy=Installs) to download.
 
-## Extension Settings
+## Use
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+press `Ctrl + Shift + P` or `Cmd + Shift + P` in Visual Studio Code and search **optional regexp replace**.
 
-For example:
+## Issue
+Report bug or need help [click here](https://github.com/yilingapa/optional-regexp-replace/issues).
 
-This extension contributes the following settings:
 
-* `myExtension.enable`: enable/disable this extension
-* `myExtension.thing`: set to `blah` to do something
+----------------------------------------------------------------------------------------------------------------
 
-## Known Issues
-
-Calling out known issues can help limit users opening duplicate issues against your extension.
-
-## Release Notes
-
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
------------------------------------------------------------------------------------------------------------
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-**Note:** You can author your README using Visual Studio Code.  Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux)
-* Toggle preview (`Shift+CMD+V` on macOS or `Shift+Ctrl+V` on Windows and Linux)
-* Press `Ctrl+Space` (Windows, Linux) or `Cmd+Space` (macOS) to see a list of Markdown snippets
-
-### For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+## Enjoy!

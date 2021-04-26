@@ -166,6 +166,25 @@ export class FileHandler {
         return new vscode.Range(i.start, i.end)
       }))
       this.selectNext()
+      return {
+        line: selected.end.line,
+        text: to
+      }
+    }
+    return null
+  }
+  editAllSelected = async (match: string, regexp: string) => {
+    const times = this.matchedPositions.length
+    for (const selected of this.matchedPositions) {
+      const to = selected.matchedStr.replace(new RegExp(match, this.ignoreCase ? 'ig' : 'g'), regexp)
+      await this.editor?.edit(editCommand => {
+        editCommand.replace(new vscode.Range(selected.start, selected.end), to)
+      })
+    }
+    this.clearStatus()
+    return {
+      times,
+      text: regexp
     }
   }
 }
