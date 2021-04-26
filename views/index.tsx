@@ -163,9 +163,11 @@ function APP() {
       try {
         if (event.data?.command === uniqueUIDForSyncStoreCommand) {
           const store = JSON.parse(event.data.payload)
-          setList(store?.list ?? [])
-          setCurrentMatch(store?.match, () => undefined)
-          setFindRegexp(store?.match)
+          if (store?.list) {
+            setList(store?.list ?? [])
+            setCurrentMatch(store?.match ?? '', () => undefined)
+            setFindRegexp(store?.match)
+          }
         }
       } catch {
         setHistory(s => {

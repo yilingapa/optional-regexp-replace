@@ -6,7 +6,7 @@ module.exports = {
   mode: 'production',
   output: {
     path: path.resolve(__dirname, '../dist/'),
-    filename: 'views.js',
+    filename: 'views.[contenthash:8].js',
     publicPath: "./"
   },
   resolve: {
