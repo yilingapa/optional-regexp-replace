@@ -1,5 +1,4 @@
 import * as vscode from 'vscode'
-import * as fs from 'fs'
 import * as os from 'os'
 import { debounce } from 'lodash'
 
@@ -190,7 +189,6 @@ export class FileHandler {
       })
       this.matchedPositions.splice(this.currentSelectedIndex, 1)
       this.currentSelectedIndex -= 1
-      this.selectNext()
       this.highLightString(false)
       return {
         line: selected.end.line,

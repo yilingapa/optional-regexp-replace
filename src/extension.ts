@@ -15,10 +15,8 @@ export function activate(context: vscode.ExtensionContext) {
         : undefined;
 
       if (currentPanel) {
-        // If we already have a panel, show it in the target column
         currentPanel.reveal(columnToShowIn);
       } else {
-        // Otherwise, create a new panel
         currentPanel = vscode.window.createWebviewPanel(
           'testWebview',
           'Optional Regexp Replace',
@@ -201,7 +199,6 @@ export function activate(context: vscode.ExtensionContext) {
           }
         })
 
-        // Reset when the current panel is closed
         currentPanel.onDidDispose(
           () => {
             currentFile?.clearStatus()
