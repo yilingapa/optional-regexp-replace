@@ -74,7 +74,7 @@ export class FileHandler {
         }
         this.userSelectFromAction = false
       })
-      const memoDebounce = debounce(() => this.highLightString(false))
+      const memoDebounce = debounce(() => this.highLightString(false), 200)
       this.clearOnChangeDocListener = vscode.workspace.onDidChangeTextDocument(e => {
         if (this.matchedPositions.length === 0) {
           this.clearStatus()
@@ -139,6 +139,7 @@ export class FileHandler {
     this.currentLineDecoration?.dispose()
     this.clearOnChangeSelectionListener?.dispose()
     this.clearOnChangeDocListener?.dispose()
+    this.currentSelectedDecoration?.dispose()
     this.matchedPositions = []
     this.currentSelectedIndex = 0
   }
