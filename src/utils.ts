@@ -24,6 +24,7 @@ export class FileHandler {
   document?: vscode.TextDocument
   currentFileStr?: string
   currentDecoration?: vscode.TextEditorDecorationType
+  currentSelectedDecoration?: vscode.TextEditorDecorationType
   currentLineDecoration?: vscode.TextEditorDecorationType
   matchedPositions: { start: vscode.Position, end: vscode.Position, matchedStr: string }[] = []
   currentSelectedIndex: number = 0
@@ -32,6 +33,10 @@ export class FileHandler {
   currentHighlightColor?: string
   clearOnChangeSelectionListener?: vscode.Disposable
   clearOnChangeDocListener?: vscode.Disposable
+  autoGoNextAfterReplace = false
+  wordBorderColor: string = '#1FA914'
+  lineBorderColor: string = '#3358D7'
+  userSelectFromAction: boolean = false
 
   updateCurrentHighlightColor = (color: string) => {
     this.currentHighlightColor = color
@@ -48,14 +53,22 @@ export class FileHandler {
       if (!this.document) {
         throw 'no opened file'
       }
+      const settings = vscode.workspace.getConfiguration('decorationColor')
+      if (settings.get('wordBorderColor') !== undefined) {
+        this.wordBorderColor = settings.get('wordBorderColor')!
+      }
+      if (settings.get('lineBorderColor') !== undefined) {
+        this.lineBorderColor = settings.get('lineBorderColor')!
+      }
       this.clearOnChangeSelectionListener = vscode.window.onDidChangeTextEditorSelection((e) => {
-        if (e.textEditor === this.editor) {
+        if (e.textEditor === this.editor && !this.userSelectFromAction) {
           const selectionItemIndex = this.matchedPositions.findIndex(i => i.start.line === e.selections[0]?.start.line)
           if (selectionItemIndex > -1) {
             this.currentSelectedIndex = selectionItemIndex
             this.select({ ...this.matchedPositions[selectionItemIndex], ifSetSelection: false })
           }
         }
+        this.userSelectFromAction = false
       })
       const memoDebounce = debounce(() => this.highLightString(false))
       this.clearOnChangeDocListener = vscode.workspace.onDidChangeTextDocument(e => {
@@ -79,16 +92,23 @@ export class FileHandler {
       if (ifSetSelection) {
         this.editor.selections = [new vscode.Selection(start, end)]
       }
+      this.userSelectFromAction = true
+      this.currentSelectedDecoration?.dispose()
+      this.currentSelectedDecoration = vscode.window.createTextEditorDecorationType({
+        backgroundColor: `rgba(100,100,100,0.3)`,
+        border: `1px solid ${this.wordBorderColor}`,
+        borderWidth: '1'
+      })
       const range = new vscode.Range(start, end)
       this.editor.revealRange(range)
-
       this.currentLineDecoration?.dispose()
       this.currentLineDecoration = vscode.window.createTextEditorDecorationType({
         backgroundColor: `rgba(100,100,100,0.3)`,
         isWholeLine: true,
-        border: `1px solid #ececec`,
-        borderWidth: '0.5'
+        border: `1px solid ${this.lineBorderColor}`,
+        borderWidth: '1'
       })
+      this.editor.setDecorations(this.currentSelectedDecoration, [range])
       this.editor.setDecorations(this.currentLineDecoration, [range])
     }
   }
@@ -122,8 +142,7 @@ export class FileHandler {
   refreshDecoration = (ranges: vscode.Range[]) => {
     this.currentDecoration?.dispose()
     this.currentDecoration = vscode.window.createTextEditorDecorationType({
-      backgroundColor: this.currentHighlightColor,
-      border: `1px solid #ececec`
+      backgroundColor: this.currentHighlightColor
     })
     this.editor?.setDecorations(this.currentDecoration, ranges)
   }
@@ -188,7 +207,9 @@ export class FileHandler {
         editCommand.replace(new vscode.Range(selected.start, selected.end), to)
       })
       this.matchedPositions.splice(this.currentSelectedIndex, 1)
-      this.currentSelectedIndex -= 1
+      if (this.autoGoNextAfterReplace) {
+        this.selectNext()
+      }
       this.highLightString(false)
       return {
         line: selected.end.line,

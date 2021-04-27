@@ -121,6 +121,7 @@ function APP() {
   const [history, setHistory] = useState<string[]>([])
   const [findRegExp, setFindRegexp] = useState<string>()
   const [ignoreCase, setIgnoreCase] = useState(false)
+  const [autoGoNext, setAutoGoNext] = useState(false)
 
   const saveToContext = useMemo(() => {
     return debounce((list: RegexpItem[], match: string) => bridge.post({
@@ -137,7 +138,7 @@ function APP() {
       bridge.post({
         command: 'setCurrentMatch',
         payload: match
-      }, debounce(cb, 200))
+      }, cb)
     }
   }, [])
 
@@ -271,11 +272,13 @@ function APP() {
     })
   }, [])
 
+  const debounceSet = useMemo(() => {
+    return debounce(searchAllAndHightLight, 300)
+  }, [])
+
   const setFindRegexpCB = useCallback((e) => {
     setFindRegexp(e.target.value)
-    setCurrentMatch(e.target.value, () => {
-      searchAllAndHightLight(e.target.value)
-    })
+    setCurrentMatch(e.target.value, () => debounceSet(e.target.value))
     saveToContext(list, e.target.value)
   }, [list])
 
@@ -355,6 +358,22 @@ function APP() {
     })
   }, [findRegExp])
 
+  const toggleAutoGoNext = useCallback(() => {
+    setAutoGoNext(i => {
+      bridge.post({
+        command: 'autoGoNextAfterReplace',
+        payload: {
+          checked: !i,
+        }
+      }, () => undefined)
+      setHistory(s => {
+        s.unshift(getLog('info', `${!i ? 'auto go next line after replace next time' : 'stay in current line after replace'}`))
+        return [...s]
+      })
+      return !i
+    })
+  }, [])
+
   const clearLog = useCallback(() => {
     setHistory([])
   }, [])
@@ -372,10 +391,9 @@ function APP() {
           value={findRegExp}
           onChange={setFindRegexpCB}
           placeholder="regexp" />
-        <div className="ignore-wrap">
-          <input type="checkbox" checked={ignoreCase} />
-          <button onClick={toggleIgnoreCase}>ignore case</button>
-        </div>
+        <button className="align-center" onClick={toggleIgnoreCase}>
+          <input type="checkbox" checked={ignoreCase} /> ignore case
+        </button>
       </div>
       <div className="dvd" />
       <div className="common-grid">
@@ -392,6 +410,9 @@ function APP() {
       <div className="dvd" />
       <div className="common-grid">
         <ColorPicker onChange={setHighlightColor} />
+        {/* <button onClick={toggleAutoGoNext} className="align-center">
+          <input type="checkbox" checked={autoGoNext} /> auto go next matched line after replace
+        </button> */}
       </div>
       {
         list.map((_, i) => {

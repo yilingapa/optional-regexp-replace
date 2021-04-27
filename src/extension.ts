@@ -165,6 +165,20 @@ export function activate(context: vscode.ExtensionContext) {
                   }
                 }
                 break
+              case 'autoGoNextAfterReplace':
+                {
+                  if (currentFile !== undefined) {
+                    currentFile.autoGoNextAfterReplace = message.payload.checked
+                    currentPanel.webview.postMessage({
+                      command: 'vscodeCB',
+                      payload: {
+                        data: null,
+                        cbUID: message.cbUID
+                      }
+                    })
+                  }
+                }
+                break
               case 'editSelected':
                 {
                   currentFile?.editSelected(message.payload.to).then(res => {
