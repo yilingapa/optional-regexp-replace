@@ -61,8 +61,12 @@ export class FileHandler {
         this.lineBorderColor = settings.get('lineBorderColor')!
       }
       this.clearOnChangeSelectionListener = vscode.window.onDidChangeTextEditorSelection((e) => {
-        if (e.textEditor === this.editor && !this.userSelectFromAction) {
-          const selectionItemIndex = this.matchedPositions.findIndex(i => i.start.line === e.selections[0]?.start.line)
+        if (e.textEditor === this.editor && !this.userSelectFromAction && e.selections.length) {
+          const start = e.selections[0].start
+          const end = e.selections[0].end
+          const selectionItemIndex = this.matchedPositions.findIndex(
+            i => i.start.line === e.selections[0]?.start.line && i.start.isBefore(start) && i.end.isAfter(end)
+          )
           if (selectionItemIndex > -1) {
             this.currentSelectedIndex = selectionItemIndex
             this.select({ ...this.matchedPositions[selectionItemIndex], ifSetSelection: false })
