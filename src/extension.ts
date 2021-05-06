@@ -5,13 +5,12 @@ import { FileHandler, Utils } from './utils'
 import { secretsKey, uniqueUIDForSyncStoreCommand } from '../views/const'
 
 export function activate(context: vscode.ExtensionContext) {
-  let currentPanel: vscode.WebviewPanel
+  let currentPanel: vscode.WebviewPanel | null
   let currentFile: FileHandler
   let onDidChangeActiveTextEditorDispose: vscode.Disposable
 
   context.subscriptions.push(
     vscode.commands.registerCommand('optional.regexp.replace', () => {
-
       const openWebView = (column: vscode.ViewColumn) => {
         if (currentPanel) {
           currentPanel.reveal(column);
@@ -63,7 +62,7 @@ export function activate(context: vscode.ExtensionContext) {
                   {
                     prepareCurrentFile()
                     currentFile!.currentMatch = message.payload
-                    currentPanel.webview.postMessage({
+                    currentPanel!.webview.postMessage({
                       command: 'vscodeCB',
                       payload: {
                         data: null,
@@ -76,7 +75,7 @@ export function activate(context: vscode.ExtensionContext) {
                   {
                     prepareCurrentFile()
                     currentFile!.currentHighlightColor = message.payload
-                    currentPanel.webview.postMessage({
+                    currentPanel!.webview.postMessage({
                       command: 'vscodeCB',
                       payload: {
                         data: null,
@@ -91,7 +90,7 @@ export function activate(context: vscode.ExtensionContext) {
                     currentFile!.clearStatus()
                     if (currentFile!.currentFileStr = currentFile!.getFile()) {
                       const num = currentFile!.highLightString()
-                      currentPanel.webview.postMessage({
+                      currentPanel!.webview.postMessage({
                         command: 'vscodeCB',
                         payload: {
                           data: num,
@@ -109,7 +108,7 @@ export function activate(context: vscode.ExtensionContext) {
                 case 'setHighlightColor':
                   {
                     currentFile?.resetHighlightColor()
-                    currentPanel.webview.postMessage({
+                    currentPanel!.webview.postMessage({
                       command: 'vscodeCB',
                       payload: {
                         data: undefined,
@@ -121,7 +120,7 @@ export function activate(context: vscode.ExtensionContext) {
                 case 'setPrevious':
                   {
                     const line = currentFile?.selectPrevious()
-                    currentPanel.webview.postMessage({
+                    currentPanel!.webview.postMessage({
                       command: 'vscodeCB',
                       payload: {
                         data: line === undefined ? 0 : line + 1,
@@ -133,7 +132,7 @@ export function activate(context: vscode.ExtensionContext) {
                 case 'setNext':
                   {
                     const line = currentFile?.selectNext()
-                    currentPanel.webview.postMessage({
+                    currentPanel!.webview.postMessage({
                       command: 'vscodeCB',
                       payload: {
                         data: line === undefined ? 0 : line + 1,
@@ -144,7 +143,7 @@ export function activate(context: vscode.ExtensionContext) {
                   break
                 case 'clearStatus':
                   currentFile?.clearStatus()
-                  currentPanel.webview.postMessage({
+                  currentPanel!.webview.postMessage({
                     command: 'vscodeCB',
                     payload: {
                       data: null,
@@ -157,7 +156,7 @@ export function activate(context: vscode.ExtensionContext) {
                     if (currentFile !== undefined) {
                       currentFile.ignoreCase = message.payload.checked
                       currentFile.highLightString()
-                      currentPanel.webview.postMessage({
+                      currentPanel!.webview.postMessage({
                         command: 'vscodeCB',
                         payload: {
                           data: null,
@@ -171,7 +170,7 @@ export function activate(context: vscode.ExtensionContext) {
                   {
                     if (currentFile !== undefined) {
                       currentFile.autoGoNextAfterReplace = message.payload.checked
-                      currentPanel.webview.postMessage({
+                      currentPanel!.webview.postMessage({
                         command: 'vscodeCB',
                         payload: {
                           data: null,
@@ -217,6 +216,7 @@ export function activate(context: vscode.ExtensionContext) {
 
           currentPanel.onDidDispose(
             () => {
+              currentPanel = null
               currentFile?.clearStatus()
               onDidChangeActiveTextEditorDispose.dispose()
             },
@@ -230,10 +230,6 @@ export function activate(context: vscode.ExtensionContext) {
         openWebView(vscode.ViewColumn.Two)
       } else {
         Utils.showWarn('please open a file first')
-      }
-
-      if (vscode.window.activeTextEditor) {
-        openWebView(vscode.ViewColumn.Two)
       }
       onDidChangeActiveTextEditorDispose = vscode.window.onDidChangeVisibleTextEditors(e => {
         if (currentFile?.editor !== undefined && !e.includes(currentFile?.editor)) {

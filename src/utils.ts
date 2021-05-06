@@ -62,7 +62,9 @@ export class FileHandler {
           const start = e.selections[0].start
           const end = e.selections[0].end
           const selectionItemIndex = this.matchedPositions.findIndex(
-            i => i.start.line === e.selections[0]?.start.line && i.start.isBefore(start) && i.end.isAfter(end)
+            i => i.start.line === e.selections[0]?.start.line &&
+              i.start.isBeforeOrEqual(start) &&
+              i.end.isAfterOrEqual(end)
           )
           if (selectionItemIndex > -1) {
             this.currentSelectedIndex = selectionItemIndex
