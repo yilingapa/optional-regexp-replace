@@ -24,12 +24,12 @@ copy `vscode:extension/qilejia.optional-regexp-replace` to browser or search **o
 
 press `Ctrl + Shift + P` or `Cmd + Shift + P` in Visual Studio Code and search **optional regexp replace**.
 
-* You can change the background color of the matched word, default is <font color=#481D0A>#481D0A</font>.
+* You can change the background color of the matched word, default is `#481D0A`.
 
 <img src="./assets/images/pic3.png" width="200" height="200"/>
 
 * After search, you can click the highlight word in editor to select which to replace, also you can click ***previous*** and ***next*** button.
-* After you click the matched word, there will be a highlight border around the selected matched part, the default color is <font color=#1FA914 >#1FA914</font>, you can change it in extension setting. You can also change the whole line border color in settings too, default is <font color=#3358D7 >#3358D7</font>.
+* After you click the matched word, there will be a highlight border around the selected matched part, the default color is `#1FA914`, you can change it in extension setting. You can also change the whole line border color in settings too, default is `#3358D7`
 ![](./assets/images/pic2.png)
 
 
