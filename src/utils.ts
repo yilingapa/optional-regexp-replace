@@ -11,12 +11,9 @@ type PosItem = {
 }
 
 export const Utils = {
-  showError(text: string) {
-    vscode.window.showErrorMessage(text)
-  },
-  showInfo(text: string) {
-    vscode.window.showInformationMessage(text)
-  }
+  showError: vscode.window.showErrorMessage,
+  showInfo: vscode.window.showInformationMessage,
+  showWarn: vscode.window.showWarningMessage
 }
 
 export class FileHandler {

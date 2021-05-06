@@ -7,7 +7,7 @@
     "plugin",
     "regexpreplace"
   ],
-  "version": "0.0.9",
+  "version": "0.0.11",
   "publisher": "qilejia",
   "engines": {
     "vscode": "^1.55.0"
